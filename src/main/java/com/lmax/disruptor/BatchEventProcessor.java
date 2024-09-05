@@ -149,7 +149,7 @@ public final class BatchEventProcessor<T>
      *  消费者消费数据都是通过WaitStrategy和生产者协调，并且通过自己维护的Sequence来记录自己的位置，每个消费者都是独立的Sequence，而且是一对一的，
      *  并在final long availableSequence = sequenceBarrier.waitFor(nextSequence);中不断的获取当前可用的和批处理数量限制之间的最小值来处理数据的。
      *  <p>
-     *  在4.0的Disruptor中移除了WorkerPool，也就是没有多个消费者来共享一个Sequence。（disruptor 移除 WorkerPool我理解还是基于性能的考虑，
+     *  在4.0的Disruptor中移除了WorkerPool，也就是没有多个线程者来共享一个Sequence。（disruptor 移除 WorkerPool我理解还是基于性能的考虑，
      *  因为WorkerPool中多消费者共享一个Sequence必然要产生竞争存在同步消耗，而只有一个线程则不用同步sequence，
      *  如果要多个线程提升并行度那可以在自己的eventHandler中使用ForkJoin之类的来处理也是一样的这样也可以并行消费而且还没有同步sequence消耗。）
      *  <pre>{@code

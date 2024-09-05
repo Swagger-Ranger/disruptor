@@ -241,8 +241,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
      * buffer), when we have new data and successfully claimed a slot we can simply
      * write over the top.
      * <p>
-     * 下面的方法工作于availableBuffer标志。
-     *
+     * 这个方法的注释就在处理，当快速消费，sequence又绕回相同的数组位置时，如何保证生产者不覆盖数据
      */
     private void setAvailable(final long sequence)
     {
@@ -261,7 +260,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
      *     经过 >>> 10 的右移后，得到 00000000000000000000000000000001，availability flag 是 1。
      * <p> 对于 sequence = 3071，其二进制表示是 00000000000000000000101111111111。
      *     经过 >>> 10 的右移后，得到 00000000000000000000000000000010，availability flag 是 2。
-     * <p> 所有获得对应 sequence位置中 availableBuffer的使用标记会一直改变，只需要重新计算sequence的标记然后对比已有的数据中的标记就知道是否可以用
+     * <p> 所以获得对应 sequence位置中 availableBuffer的使用标记会一直改变，只需要重新计算sequence的标记然后对比已有的数据中的标记就知道是否可以用
      * @see Sequencer#isAvailable(long)
      */
     @Override

@@ -47,7 +47,8 @@ public interface EventHandler<T> extends EventHandlerBase<T>
      *  <p>Typically this would be used when the handler is performing some sort of batching operation such as writing to an IO
      *  device; after the operation has completed, the implementation should call {@link Sequence#set} to update the
      *  sequence and allow other processes that are dependent on this handler to progress.
-     *
+     *  <p>在某些特殊情况下，允许 EventHandler（事件处理器）在处理完事件后，通过回调通知 BatchEventProcessor 其已经完成了事件的处理。
+     *  这通常用于那些处理过程中涉及到延迟或批处理操作的场景，比如写入 I/O 设备。
      * @param sequenceCallback callback on which to notify the {@link BatchEventProcessor} that the sequence has progressed.
      */
     default void setSequenceCallback(Sequence sequenceCallback)

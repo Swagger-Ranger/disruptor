@@ -18,6 +18,7 @@ package com.lmax.disruptor;
 
 public final class BatchEventProcessorBuilder
 {
+    // 这里默认了 maxBatchSize的最大长度
     private int maxBatchSize = Integer.MAX_VALUE;
 
     /**

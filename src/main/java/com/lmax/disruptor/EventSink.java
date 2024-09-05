@@ -2,6 +2,7 @@ package com.lmax.disruptor;
 
 /**
  * Write interface for {@link RingBuffer}.
+ * EventSink 就是 RingBuffer 的操作接口，旨在提供一种简化的方式，供外部调用代码与 Disruptor 的事件发布机制交互
  * @param <E> The event type
  */
 public interface EventSink<E>

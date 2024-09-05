@@ -22,8 +22,6 @@ package com.lmax.disruptor;
  * instance.
  *
  * <p>An EventProcessor will generally be associated with a Thread for execution.
- * <p>
- * EventProcessor设计目的：就是当需要在外部控制disruptor的消费过程或者自定义消费的拓扑关系时就可以使用EventProcessor
  *
  * <p> 注意：EventHandler才是实际的消费者需要自己实现，而EventProcessor则只是一个管理接口，不需要自己实现；
  * EventProcessor的实现类往往也是提供对消费过程的管理，实际的事件处理是委托给 EventHandler
