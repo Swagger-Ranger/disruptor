@@ -29,6 +29,7 @@ import java.util.concurrent.ThreadFactory;
 
 /**
  * Provides a repository mechanism to associate {@link EventHandler}s with {@link EventProcessor}s
+ * Disruptor 框架中一个内部管理类，负责管理事件消费者（EventProcessor）和消费者组（EventHandler）的关系
  */
 class ConsumerRepository
 {

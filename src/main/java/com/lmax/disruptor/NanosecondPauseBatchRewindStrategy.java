@@ -4,6 +4,7 @@ import java.util.concurrent.locks.LockSupport;
 
 /**
  * <p>Strategy for handling a rewindableException that will pause for a specified amount of nanos.</p>
+ * 暂停给定纳秒后重试
  */
 public class NanosecondPauseBatchRewindStrategy implements BatchRewindStrategy
 {

@@ -17,12 +17,16 @@ package com.lmax.disruptor;
 
 /**
  * Typically used to decouple classes from {@link RingBuffer} to allow easier testing
+ * <p>
+ *     接口的主要作用是解耦事件数据的提供者与 RingBuffer，将数据提供的逻辑从 RingBuffer 中分离出来，从而提高代码的可测试性和灵活性。
+ * </p>
  *
  * @param <T> The type provided by the implementation
  */
 public interface DataProvider<T>
 {
     /**
+     * 根据给定的序列号获取数据项
      * @param sequence The sequence at which to find the data
      * @return the data item located at that sequence
      */

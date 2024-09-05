@@ -17,8 +17,12 @@ package com.lmax.disruptor;
 
 /**
  * Called by the {@link RingBuffer} to pre-populate all the events to fill the RingBuffer.
+ * EventFactory：用于初始化 RingBuffer 中的事件对象，是创建事件对象的工厂方法，提供空的事件实例。
+ * EventTranslator：用于向事件对象中写入实际的业务数据，它负责将生产者的数据翻译并写入到 RingBuffer 的节点（事件对象）中。
  *
+ * @see EventTranslator
  * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
+ *           事件实现，在交换或并行协调事件期间存储用于共享的数据。
  */
 public interface EventFactory<T>
 {

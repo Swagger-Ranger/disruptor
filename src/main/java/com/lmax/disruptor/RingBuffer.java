@@ -20,6 +20,7 @@ import com.lmax.disruptor.dsl.ProducerType;
 
 abstract class RingBufferPad
 {
+    // 缓存填充，将要访问的item隔开避免在同一个缓存行，以避免伪共享，56个byte，一个byte是8位（bit），即1字节（byte）；CPU每个缓存行通常是64字节大小
     protected byte
         p10, p11, p12, p13, p14, p15, p16, p17,
         p20, p21, p22, p23, p24, p25, p26, p27,
@@ -30,8 +31,16 @@ abstract class RingBufferPad
         p70, p71, p72, p73, p74, p75, p76, p77;
 }
 
+/**
+ * RingBufferFields 类是 Disruptor 框架中的一个核心类，它主要用于管理和存储环形缓冲区（Ring Buffer）中的数据项。
+ * @param <E>
+ */
 abstract class RingBufferFields<E> extends RingBufferPad
 {
+    /**
+     * BUFFER_PAD：这是一个静态常量，值为32。
+     * 用来防止伪共享，通过在数组的开头和结尾添加额外的填充，确保 RingBuffer 中的有效数据项与这些填充项之间有一定的距离，减少伪共享的可能性。
+     */
     private static final int BUFFER_PAD = 32;
 
     private final long indexMask;
@@ -39,6 +48,10 @@ abstract class RingBufferFields<E> extends RingBufferPad
     protected final int bufferSize;
     protected final Sequencer sequencer;
 
+    /**
+     * 调用的地方就是 RingBuffer#RingBuffer方法
+     * @see RingBuffer#RingBuffer(EventFactory, Sequencer)
+     */
     @SuppressWarnings("unchecked")
     RingBufferFields(
         final EventFactory<E> eventFactory,
@@ -51,26 +64,38 @@ abstract class RingBufferFields<E> extends RingBufferPad
         {
             throw new IllegalArgumentException("bufferSize must not be less than 1");
         }
+        // bitCount 方法的主要用途是在处理二进制数据时，计算一个整数中的 1 的数量，这里就是在校验必须是2的n次方
         if (Integer.bitCount(bufferSize) != 1)
         {
             throw new IllegalArgumentException("bufferSize must be a power of 2");
         }
 
+        // indexMask就是有效数位全是1的整数
         this.indexMask = bufferSize - 1;
+        /*
+         * 数组的大小为 bufferSize + 2 * BUFFER_PAD，但实际计算位置仍然是sequence & indexMask位运算计算位置。
+         * 但通过添加两个pad使得，首尾也就是插入和获取位置始终相差一个pad 32个位置距离，但需要插入两个pad分别在首尾这样是为了防止数组越界
+         *
+         * BUFFER_PAD 确保了实际的数据存储区域不会紧贴数组的开头或结尾，而是留出了一定的缓冲空间。这样，当多个生产者或消费者线程访问 RingBuffer 时，
+         * 他们对数据的访问始终会与填充区域隔离，避免了对相邻缓存行的竞争，从而减少了伪共享。
+         */
         this.entries = (E[]) new Object[bufferSize + 2 * BUFFER_PAD];
         fill(eventFactory);
     }
 
+    // 生产节点填充数组，这个数组节点会一直存在，数据元素不会触发gc，而数据都是通过EventTranslator来修改其中的节点来传递的
     private void fill(final EventFactory<E> eventFactory)
     {
         for (int i = 0; i < bufferSize; i++)
         {
+            // 这里每一个实际填充的位置都是移动了 BUFFER_PAD长度的
             entries[BUFFER_PAD + i] = eventFactory.newInstance();
         }
     }
 
     protected final E elementAt(final long sequence)
     {
+        // 获取元素位置也要加上pad
         return entries[BUFFER_PAD + (int) (sequence & indexMask)];
     }
 }
@@ -78,6 +103,7 @@ abstract class RingBufferFields<E> extends RingBufferPad
 /**
  * Ring based store of reusable entries containing the data representing
  * an event being exchanged between event producer and {@link EventProcessor}s.
+ * RingBuffer 用于存储事件（数据），并在生产者和消费者之间进行事件的高效传递。
  *
  * @param <E> implementation storing the data for sharing during exchange or parallel coordination of an event.
  */

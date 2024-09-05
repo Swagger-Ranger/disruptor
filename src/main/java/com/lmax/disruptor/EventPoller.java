@@ -5,7 +5,10 @@ package com.lmax.disruptor;
  * an event poller allows the user to control the flow of execution. This makes it ideal
  * for interoperability with existing threads whose lifecycle is not controlled by the
  * disruptor DSL.
- *
+ *<p>
+ * EventPoller 允许用户以轮询的方式从 RingBuffer 中获取事件。这与RingBuffer的事件处理器（如 BatchEventProcessor）不同，后者通常以事件驱动的方式自动处理事件。
+ * <p>
+ * EventPoller适用于需要与已有线程系统或非 Disruptor 控制的线程系统进行交互的场景。比如，当你需要在不完全依赖 Disruptor 的情况下，控制线程的生命周期或者执行流时，可以使用 EventPoller。
  * @param <T> the type of event used.
  */
 public class EventPoller<T>

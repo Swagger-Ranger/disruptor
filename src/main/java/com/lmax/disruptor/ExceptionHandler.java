@@ -17,6 +17,7 @@ package com.lmax.disruptor;
 
 /**
  * Callback handler for uncaught exceptions in the event processing cycle of the {@link BatchEventProcessor}
+ * <p>BatchEventProcessor 中抛出的未处理的异常都是 ExceptionHandler来处理，并且ExceptionHandler的设计目的就是在事件处理过程中出现异常时提供一个统一的兜底处理机制。
  *
  * @param <T> implementation storing the data for sharing during exchange or parallel coordination of an event.
  */

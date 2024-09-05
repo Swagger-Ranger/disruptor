@@ -24,6 +24,8 @@ import static java.lang.Math.min;
 /**
  * Convenience class for handling the batching semantics of consuming entries from a {@link RingBuffer}
  * and delegating the available events to an {@link EventHandler}.
+ *  EventProcessor 的核心实现类，控制整体Disruptor消费流程的核心类
+ *  EventProcessor和event Handler一对一，和sequence也是一对一，并且同一个RingBuffer里面是可以启动多个EventProcessor
  *
  * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
  */
@@ -110,6 +112,7 @@ public final class BatchEventProcessor<T>
     public void run()
     {
         int witnessValue = running.compareAndExchange(IDLE, RUNNING);
+        // compareAndExchange，返回的实际上就是原有的值，如果原有的值==expectedValue则设置成功，如果!=expectedValue则设置失败。
         if (witnessValue == IDLE) // Successful CAS
         {
             sequenceBarrier.clearAlert();
@@ -141,6 +144,29 @@ public final class BatchEventProcessor<T>
         }
     }
 
+    /**
+     *  BatchEventProcessor 处理事件的核心循环。不断地从 RingBuffer 中获取事件，并交给 EventHandler 处理，同时处理异常、重试机制和超时等情况。
+     *  消费者消费数据都是通过WaitStrategy和生产者协调，并且通过自己维护的Sequence来记录自己的位置，每个消费者都是独立的Sequence，而且是一对一的，
+     *  并在final long availableSequence = sequenceBarrier.waitFor(nextSequence);中不断的获取当前可用的和批处理数量限制之间的最小值来处理数据的。
+     *  <p>
+     *  在4.0的Disruptor中移除了WorkerPool，也就是没有多个消费者来共享一个Sequence。（disruptor 移除 WorkerPool我理解还是基于性能的考虑，
+     *  因为WorkerPool中多消费者共享一个Sequence必然要产生竞争存在同步消耗，而只有一个线程则不用同步sequence，
+     *  如果要多个线程提升并行度那可以在自己的eventHandler中使用ForkJoin之类的来处理也是一样的这样也可以并行消费而且还没有同步sequence消耗。）
+     *  <pre>{@code
+     *     class MyEventHandler implements EventHandler<MyEvent> {
+     *     private final ForkJoinPool forkJoinPool = new ForkJoinPool();
+     *
+     *     @Override
+     *     public void onEvent(MyEvent event, long sequence, boolean endOfBatch) {
+     *         // ForkJoinPool 用于并行处理事件
+     *         forkJoinPool.submit(() -> {
+     *             // 执行事件处理逻辑
+     *             System.out.println("Processing event: " + event.getData());
+     *         }).join();
+     *     }
+     * }
+     *  }
+     */
     private void processEvents()
     {
         T event = null;
@@ -164,16 +190,19 @@ public final class BatchEventProcessor<T>
                     while (nextSequence <= endOfBatchSequence)
                     {
                         event = dataProvider.get(nextSequence);
+                        // 这里数据已经通过event = dataProvider.get(nextSequence);取出来了，
+                        // 此时这个onEvent方法就是在执行消费逻辑，而sequence是告诉处理逻辑RingBuffer中的位置，endOfBatch是否是此批量的最后一个
                         eventHandler.onEvent(event, nextSequence, nextSequence == endOfBatchSequence);
                         nextSequence++;
                     }
 
                     retriesAttempted = 0;
-
+                    // 推进自己的 sequence
                     sequence.set(endOfBatchSequence);
                 }
                 catch (final RewindableException e)
                 {
+                    // 这里就是 RewindableException异常的处理，将游标作回滚，是否回滚看构造器中传入的是否是 RewindableEventHandler
                     nextSequence = rewindHandler.attemptRewindGetNextSequence(e, startOfBatchSequence);
                 }
             }

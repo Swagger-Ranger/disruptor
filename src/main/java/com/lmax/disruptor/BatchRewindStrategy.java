@@ -2,6 +2,8 @@ package com.lmax.disruptor;
 
 /**
  * Strategy for handling a rewindableException when processing an event.
+ * 定义在事件处理过程遇到{@link  RewindableException}的处理策略，{@link RewindHandler}是负责执行这一策略的核心类
+ *
  */
 public interface BatchRewindStrategy
 {

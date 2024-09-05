@@ -33,6 +33,7 @@ import java.util.concurrent.locks.LockSupport;
  */
 public final class MultiProducerSequencer extends AbstractSequencer
 {
+    //创建一个可以操作 int[] 数组元素的 VarHandle AVAILABLE_ARRAY 以高效安全地访问和修改下面 availableBuffer数组变量中的元素，而无需通过普通的同步手段
     private static final VarHandle AVAILABLE_ARRAY = MethodHandles.arrayElementVarHandle(int[].class);
 
     private final Sequence gatingSequenceCache = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
@@ -40,7 +41,9 @@ public final class MultiProducerSequencer extends AbstractSequencer
     // availableBuffer tracks the state of each ringbuffer slot
     // see below for more details on the approach
     private final int[] availableBuffer;
+    // 计算RingBuffer索引的掩码值。构造其中赋值 bufferSize -1，bufferSize为2的幂，则bufferSize -1就是有效位全是1
     private final int indexMask;
+    //  构造其中赋值indexShift = Util.log2(bufferSize) 就是在确认bufferSize的2的对数，比如bufferSize=1024，则indexShift=10
     private final int indexShift;
 
     /**
@@ -52,6 +55,8 @@ public final class MultiProducerSequencer extends AbstractSequencer
     public MultiProducerSequencer(final int bufferSize, final WaitStrategy waitStrategy)
     {
         super(bufferSize, waitStrategy);
+
+        // availableBuffer和 ringbuffer的bufferSize是一样的，用于追踪每个生产者在写入完成后，标记该槽位已经可供消费者读取
         availableBuffer = new int[bufferSize];
         Arrays.fill(availableBuffer, -1);
 
@@ -88,11 +93,16 @@ public final class MultiProducerSequencer extends AbstractSequencer
     }
 
     /**
+     * final 修饰符是让参数不可改变，我理解这里参数加final修饰符，主要是为了确保sequence不会被修改，并且虚拟机和编译器对final修饰的变量也有更好的优化，
+     * 还有就是传达了一个明确的编程意图：此参数不能被修改、以提示维护人员不要乱改sequence
+     *
      * @see Sequencer#claim(long)
+     * @see SingleProducerSequencer#claim(long)
      */
     @Override
     public void claim(final long sequence)
     {
+        // cursor是个Sequence，其有内存屏障来维护一致性
         cursor.set(sequence);
     }
 
@@ -116,6 +126,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
             throw new IllegalArgumentException("n must be > 0 and < bufferSize");
         }
 
+        // cursor.getAndAdd(n);是原子性的
         long current = cursor.getAndAdd(n);
 
         long nextSequence = current + n;
@@ -196,7 +207,10 @@ public final class MultiProducerSequencer extends AbstractSequencer
     }
 
     /**
+     * 单生产者直接推进到高位sequence
+     * 多生产者模式需要逐个推进可以确保availableBuffer中的每个序号被正确标记为已发布，并且可以避免并发问题。
      * @see Sequencer#publish(long, long)
+     * @see SingleProducerSequencer#publish(long, long)
      */
     @Override
     public void publish(final long lo, final long hi)
@@ -226,6 +240,9 @@ public final class MultiProducerSequencer extends AbstractSequencer
      * minimum gating sequence is effectively our last available position in the
      * buffer), when we have new data and successfully claimed a slot we can simply
      * write over the top.
+     * <p>
+     * 下面的方法工作于availableBuffer标志。
+     *
      */
     private void setAvailable(final long sequence)
     {
@@ -238,6 +255,13 @@ public final class MultiProducerSequencer extends AbstractSequencer
     }
 
     /**
+     * sequence是一个一直递增的数，而indexShift则是固定的就是bufferSize的2的幂，为什么比较两个就可以知道是否其可以使用：
+     * <p> 假设 RingBuffer 大小为 1024，因此 indexShift = 10。
+     * <p> 对于 sequence = 2047，其二进制表示是 00000000000000000000011111111111。
+     *     经过 >>> 10 的右移后，得到 00000000000000000000000000000001，availability flag 是 1。
+     * <p> 对于 sequence = 3071，其二进制表示是 00000000000000000000101111111111。
+     *     经过 >>> 10 的右移后，得到 00000000000000000000000000000010，availability flag 是 2。
+     * <p> 所有获得对应 sequence位置中 availableBuffer的使用标记会一直改变，只需要重新计算sequence的标记然后对比已有的数据中的标记就知道是否可以用
      * @see Sequencer#isAvailable(long)
      */
     @Override
@@ -262,6 +286,10 @@ public final class MultiProducerSequencer extends AbstractSequencer
         return availableSequence;
     }
 
+    /**
+     * 返回sequence除以 bufferSize的值并减去取bufferSize模余数的值，再将值按int截断，这个值会不断的增加，甚至会超过bufferSize
+     * 但这不影响其处理 availableBuffer数组标记对应 RingBuffer 标记位置的可用性，因为isAvailable(final long sequence)中只需要比较前后两者而不是直接用其值
+     */
     private int calculateAvailabilityFlag(final long sequence)
     {
         return (int) (sequence >>> indexShift);

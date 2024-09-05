@@ -49,6 +49,8 @@ class SequenceGroups
         }
         while (!updater.compareAndSet(holder, currentSequences, updatedSequences));
 
+        // 这里再次 sequence.set(cursorSequence)，是为了避免上面在CAS操作中cursor更新导致数据不准确；
+        // 并且这里不需要加并发控制手段，因为sequence.set本身就有内存屏障
         cursorSequence = cursor.getCursor();
         for (Sequence sequence : sequencesToAdd)
         {
@@ -56,6 +58,7 @@ class SequenceGroups
         }
     }
 
+    // 这里移除的是单个Sequence，但可能存在在某些高并发场景下，多个消费者可能会共享同一个 Sequence 来跟踪进度，所以下面调用了一个countMatching来计算减少的数组长度
     static <T> boolean removeSequence(
         final T holder,
         final AtomicReferenceFieldUpdater<T, Sequence[]> sequenceUpdater,
@@ -98,6 +101,7 @@ class SequenceGroups
         int numToRemove = 0;
         for (T value : values)
         {
+            // 一个批量处理场景中，多个消费者可以共享同一个 Sequence 来指示处理的进度，所以这里移除一个，会导致数组中的数量减少的不止1
             if (value == toMatch) // Specifically uses identity
             {
                 numToRemove++;

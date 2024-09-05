@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>This strategy can be used when throughput and low-latency are not as important as CPU resource.
  * Spins, then yields, then waits using the configured fallback WaitStrategy.
+ * <p>分阶段等待策略，当吞吐量和低延迟不如CPU资源重要时，可以使用这种策略。先旋转(Spins)，然后(yields)，再使用配置的备用等待策略等待。
  */
 public final class PhasedBackoffWaitStrategy implements WaitStrategy
 {

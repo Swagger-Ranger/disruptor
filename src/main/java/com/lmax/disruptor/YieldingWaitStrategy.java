@@ -22,6 +22,9 @@ package com.lmax.disruptor;
  *
  * <p>This strategy will use 100% CPU, but will more readily give up the CPU than a busy spin strategy if other threads
  * require CPU resource.
+ * <p>
+ * 使用线程的收益策略。yield()用于在初始旋转后等待barrier的事件处理器。
+ * 这种策略将使用100%的CPU，但如果其他线程需要CPU资源，则比繁忙的spin策略更容易放弃CPU。
  */
 public final class YieldingWaitStrategy implements WaitStrategy
 {

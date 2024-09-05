@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * No operation version of a {@link EventProcessor} that simply tracks a {@link Sequence}.
  *
  * <p>This is useful in tests or for pre-filling a {@link RingBuffer} from a publisher.
+ * 无操作（No-Operation）的 EventProcessor 实现，通常用于测试或者特殊场景下，不执行任何事件处理逻辑。
  */
 public final class NoOpEventProcessor implements EventProcessor
 {

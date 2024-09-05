@@ -19,6 +19,8 @@ package com.lmax.disruptor;
 /**
  * Coordination barrier for tracking the cursor for publishers and sequence of
  * dependent {@link EventProcessor}s for processing a data structure
+ * <p>
+ * GatingSequence是协调消费者和生产者，而SequenceBarrier是协调多消费者消费
  */
 public interface SequenceBarrier
 {
@@ -49,6 +51,8 @@ public interface SequenceBarrier
 
     /**
      * Alert the {@link EventProcessor}s of a status change and stay in this status until cleared.
+     * <p> alert 方法用于通知 SequenceBarrier 发生了异常或需要中断当前的事件处理。
+     * 这通常是由事件处理器或其他组件触发的，目的是让 SequenceBarrier 知道有需要立即处理的问题。
      */
     void alert();
 
@@ -59,6 +63,8 @@ public interface SequenceBarrier
 
     /**
      * Check if an alert has been raised and throw an {@link AlertException} if it has.
+     * <p> checkAlert 方法用于检查 SequenceBarrier 是否已经被标记为需要响应异常或中断。
+     * 如果 alert 方法被调用设置了标志，checkAlert 方法将会检测到这一点并相应地处理。
      *
      * @throws AlertException if alert has been raised.
      */

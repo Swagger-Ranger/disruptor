@@ -21,6 +21,9 @@ import java.util.Arrays;
 
 /**
  * Hides a group of Sequences behind a single Sequence
+ * <p>
+ *  FixedSequenceGroup将多个Sequence对象封装为一个逻辑上的单一Sequence，来简化和优化多消费者场景下的同步操作。以提高并发性能，减少了复杂的手动管理代码
+ * 提供这个类，其实就是因为即使有多个Sequence，但我们在同步生产者和消费者时需要关心的其实也只是最小的Sequence；
  */
 public final class FixedSequenceGroup extends Sequence
 {

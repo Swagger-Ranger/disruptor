@@ -8,6 +8,7 @@ import static com.lmax.disruptor.util.Util.awaitNanos;
 /**
  * Variation of the {@link TimeoutBlockingWaitStrategy} that attempts to elide conditional wake-ups
  * when the lock is uncontended.
+ * TimeoutBlockingWaitStrategy的变体，也是通过使用了一个AtomicBoolean signalNeeded来没有争用地唤醒
  */
 public class LiteTimeoutBlockingWaitStrategy implements WaitStrategy
 {

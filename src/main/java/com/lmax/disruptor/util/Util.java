@@ -100,6 +100,7 @@ public final class Util
         {
             throw new IllegalArgumentException("value must be a positive number");
         }
+        // numberOfLeadingZeros 就是32位int对应的前导的0，比如i = 16（即二进制为 00000000 00000000 00000000 00010000），numberOfLeadingZeros结果为27
         return Integer.SIZE - Integer.numberOfLeadingZeros(value) - 1;
     }
 
@@ -115,6 +116,7 @@ public final class Util
         long nanos = timeoutNanos % ONE_MILLISECOND_IN_NANOSECONDS;
 
         long t0 = System.nanoTime();
+        // 精确的睡眠等待
         mutex.wait(millis, (int) nanos);
         long t1 = System.nanoTime();
 

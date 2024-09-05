@@ -40,6 +40,17 @@ class RhsPadding extends Value
  *
  * <p>Also attempts to be more efficient with regards to false
  * sharing by adding padding around the volatile field.
+ *
+ * <p>
+ * Sequence的所有操作读增加了内存屏障
+ * Acquire Fence (VarHandle.acquireFence();)
+ * 	•确保在屏障之前的读取操作在屏障代码VarHandle.acquireFence()对应的代码行之前完成。
+ * 	•确保读取的数据不会被重新排序到屏障之后。
+ * Release Fence (VarHandle.releaseFence();)
+ * 	•确保在屏障之前的写入操作在屏障代码VarHandle.releaseFence()对应的代码行之前完成。
+ * 	•确保写入的数据不会被重新排序到屏障之后。
+ * Full Fence (VarHandle.fullFence();)
+ * 	完整的内存屏障，确保在此屏障之后的所有读写操作不会被重排到屏障之前。
  */
 public class Sequence extends RhsPadding
 {
@@ -86,6 +97,10 @@ public class Sequence extends RhsPadding
     public long get()
     {
         long value = this.value;
+        /*
+         * 在读取值之后调用 acquireFence 内存屏障，它确保在它之前的所有读操作（读取数据）都不会被重排到它之后。
+         * 这意味着，acquireFence 确保了在它之前读取的值是最新的，并且不会被重新排序到屏障之后。
+         */
         VarHandle.acquireFence();
         return value;
     }
@@ -99,6 +114,10 @@ public class Sequence extends RhsPadding
      */
     public void set(final long value)
     {
+        /*
+         * 它确保在它之前的所有写操作（写入数据）都不会被重排到它之后。
+         * 这意味着，releaseFence 确保了在它之前的写操作（this.value = value）在内存中是可见的，并且不会被重排到屏障之后。
+         */
         VarHandle.releaseFence();
         this.value = value;
     }

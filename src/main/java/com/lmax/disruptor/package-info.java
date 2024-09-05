@@ -9,6 +9,11 @@
  *
  * <p>Almost any graph or pipeline structure can be composed via one or more Disruptor patterns.
  *
+ * <p>Disruptor是一个并发编程框架，用于交换和协调作为连续事件系列的工作。它可以作为通过队列将处理阶段连接在一起的替代方案。
+ * Disruptor设计的特点是产生的gc负担比队列要少得多，并分离了并发问题，因此可以采用非锁算法，从而获得更好的可伸缩性和性能。
+ * 它的工作原理是有多个阶段，每个阶段都是具有本地状态和内存的单线程。不存在全局内存，所有通信都是通过托管环形缓冲区传递消息/状态来实现的。
+ * 几乎任何图形或流水线结构都可以通过一个或多个Disruptor模式组合。
+ *
  * <h2>UniCast a series of items between 1 publisher and 1 EventProcessor.</h2>
  *
  * <pre>{@code

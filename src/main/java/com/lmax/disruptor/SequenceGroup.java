@@ -22,6 +22,10 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * A {@link Sequence} group that can dynamically have {@link Sequence}s added and removed while being
  * thread safe.
+ * <p>管理一组 Sequence 对象，并允许在运行时动态地添加或移除 Sequence。
+ * 在 Disruptor 的多消费者模型中，不同的消费者会在 RingBuffer 中处理不同的事件，
+ * SequenceGroup 用于协调这些消费者的进度，确保生产者不会覆盖尚未被消费者消费的数据，
+ * 并且保证生产者和消费者在高并发情况下可以安全地进行同步操作。
  *
  * <p>The {@link SequenceGroup#get()} and {@link SequenceGroup#set(long)} methods are lock free and can be
  * concurrently be called with the {@link SequenceGroup#add(Sequence)} and {@link SequenceGroup#remove(Sequence)}.

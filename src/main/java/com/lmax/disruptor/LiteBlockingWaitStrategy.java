@@ -65,6 +65,11 @@ public final class LiteBlockingWaitStrategy implements WaitStrategy
     @Override
     public void signalAllWhenBlocking()
     {
+        /*
+         * LiteBlockingWaitStrategy和BlockingWaitStrategy都是使用的synchronized来处理消费者同步等待的
+         * 只是LiteBlockingWaitStrategy使用了一个atomicBoolean来避免notifyAll唤醒的时候出现惊群效应，
+         * 因为当生产者有一个数据就绪时就会立马唤醒所有线程，此时必然是少量线程能成功，而大量的线程去竞争同一把锁，会增加不必要的上下文切换和 CPU 开销。
+         */
         if (signalNeeded.getAndSet(false))
         {
             synchronized (mutex)

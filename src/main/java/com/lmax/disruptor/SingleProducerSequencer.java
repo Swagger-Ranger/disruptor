@@ -48,8 +48,11 @@ abstract class SingleProducerSequencerFields extends SingleProducerSequencerPad
 
     /**
      * Set to -1 as sequence starting point
+     * nextValue 和 cachedValue 是 SingleProducerSequencer 中非常核心的两个变量，涉及到生产者的位置追踪和消费者进度的缓存。为了避免伪共享，两个被填充在中间
      */
+    // nextValue 表示当前生产者即将发布的下一个序号
     long nextValue = Sequence.INITIAL_VALUE;
+    // 上次从消费者中获取的最小序号，用于优化性能，避免每次都查询所有消费者的进度。
     long cachedValue = Sequence.INITIAL_VALUE;
 }
 
@@ -94,21 +97,31 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
 
     private boolean hasAvailableCapacity(final int requiredCapacity, final boolean doStore)
     {
-        long nextValue = this.nextValue;
 
+        long nextValue = this.nextValue;
+        // wrapPoint 是一个计算值，用于判断是否有足够的容量，如果生产者发布requiredCapacity的事件，它的序号会“绕回”到 RingBuffer 的哪一位置。
         long wrapPoint = (nextValue + requiredCapacity) - bufferSize;
+        // cachedGatingSequence 是上次从消费者中获取的最小序号
         long cachedGatingSequence = this.cachedValue;
 
+        /*
+         * 这里的if逻辑满足则说明需要进一步检查是否有足够的可用空间
+         * 如果 wrapPoint 大于 cachedGatingSequence，说明生产者可能会覆盖尚未被消费者处理的事件，需要进一步验证是否有足够的容量
+         * 如果 cachedGatingSequence 大于 nextValue，说明消费者的进度快于生产者的位置。一般不可能，除非出问题，但也需要检查。
+         */
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
         {
+            //doStore就是是否要加入缓存屏障，在单线程的情况下nextValue始终是一致的，只有自己会修改，而调用setVolatile，是为了使用其方法中的内存屏障代码
             if (doStore)
             {
                 cursor.setVolatile(nextValue);  // StoreLoad fence
             }
 
+            // 这里重新计算 minSequence的位置，并且更新缓存值
             long minSequence = Util.getMinimumSequence(gatingSequences, nextValue);
             this.cachedValue = minSequence;
 
+            // 如果 wrapPoint > minSequence 则才是false空间不足，否则都是外层的true即空间足够
             if (wrapPoint > minSequence)
             {
                 return false;
@@ -133,6 +146,7 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
     @Override
     public long next(final int n)
     {
+        // 在生产环境中通常不启用断言。开启参数：java -ea
         assert sameThread() : "Accessed by two threads - use ProducerType.MULTI!";
 
         if (n < 1 || n > bufferSize)
@@ -148,9 +162,12 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
 
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
         {
+
+            // doStore就是是否要加入缓存屏障，在单线程的情况下nextValue始终是一致的，只有自己会修改，而调用setVolatile，是为了使用其方法中的内存屏障代码
             cursor.setVolatile(nextValue);  // StoreLoad fence
 
             long minSequence;
+            // 等待消费者消费，后继续获取下一个存储槽位
             while (wrapPoint > (minSequence = Util.getMinimumSequence(gatingSequences, nextValue)))
             {
                 LockSupport.parkNanos(1L); // TODO: Use waitStrategy to spin?
@@ -184,6 +201,7 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
             throw new IllegalArgumentException("n must be > 0");
         }
 
+        // 这里hasAvailableCapacity 参数doStore就是在实际推进sequence
         if (!hasAvailableCapacity(n, true))
         {
             throw InsufficientCapacityException.INSTANCE;
@@ -209,10 +227,12 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
 
     /**
      * @see Sequencer#claim(long)
+     * @see MultiProducerSequencer#claim(long)
      */
     @Override
     public void claim(final long sequence)
     {
+        // 单生产者即单线程不需要加锁
         this.nextValue = sequence;
     }
 
@@ -227,7 +247,10 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
     }
 
     /**
+     * 单生产者直接推进到高位sequence，多生产者则需要一个一个推进
+     *
      * @see Sequencer#publish(long, long)
+     * @see MultiProducerSequencer#publish(long)
      */
     @Override
     public void publish(final long lo, final long hi)

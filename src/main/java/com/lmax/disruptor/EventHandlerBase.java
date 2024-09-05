@@ -24,10 +24,14 @@ interface EventHandlerBase<T> extends EventHandlerIdentity
      * to do slower operations like I/O as they can group together the data from multiple events into a single
      * operation.  Implementations should ensure that the operation is always performed when endOfBatch is true as
      * the time between that message and the next one is indeterminate.
+     * <p>
+     * 当发布者将事件发布到RingBuffer时调用。BatchEventProcessor将从RingBuffer中批量读取消息，其中批量是所有可以处理的事件，而不必等待任何新事件到达。
+     * 对于需要执行I/ O等较慢操作的事件处理程序来说，这很有用，因为它们可以将多个事件中的数据组合为一个操作。实现应该确保当endOfBatch为true时总是执行操作，
+     * 因为该消息与下一个消息之间的时间是不确定的。
      *
-     * @param event      published to the {@link RingBuffer}
-     * @param sequence   of the event being processed
-     * @param endOfBatch flag to indicate if this is the last event in a batch from the {@link RingBuffer}
+     * @param event      published to the {@link RingBuffer}  获取的事件数据
+     * @param sequence   of the event being processed  在RingBuffer中的位置
+     * @param endOfBatch flag to indicate if this is the last event in a batch from the {@link RingBuffer} 是否是改批次的最后一个，如果是可以自定义一些操作比如：一次性提交、释放资源、记录日志、更新统计数据等等
      * @throws Throwable if the EventHandler would like the exception handled further up the chain or possible rewind
      * the batch if a {@link RewindableException} is thrown.
      */
@@ -35,6 +39,7 @@ interface EventHandlerBase<T> extends EventHandlerIdentity
 
     /**
      * Invoked by {@link BatchEventProcessor} prior to processing a batch of events
+     * BatchEventProcessor 在开始批处理事件之前调用
      *
      * @param batchSize the size of the batch that is starting
      * @param queueDepth the total number of queued up events including the batch about to be processed

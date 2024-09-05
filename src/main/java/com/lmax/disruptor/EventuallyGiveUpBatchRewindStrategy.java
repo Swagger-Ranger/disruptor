@@ -3,6 +3,7 @@ package com.lmax.disruptor;
 /**
  * <p>Strategy for handling a rewindableException that will eventually delegate the exception to the
  * {@link ExceptionHandler} after a specified number of attempts have been made.</p>
+ * 先重试，超过maxAttempts后抛出
  */
 public class EventuallyGiveUpBatchRewindStrategy implements BatchRewindStrategy
 {
