@@ -30,6 +30,12 @@ import java.util.concurrent.locks.LockSupport;
  * <p>Note on {@link Sequencer#getCursor()}:  With this sequencer the cursor value is updated after the call
  * to {@link Sequencer#next()}, to determine the highest available sequence that can be read, then
  * {@link Sequencer#getHighestPublishedSequence(long, long)} should be used.
+ *
+ * <p>
+ * 这个类最吊的就是处理多生产者写数据解决办法
+ * 首先推进`sequence`都是一样的，不管哪个生产者要写入数据都是通过`next`或者`tryNext`去申请槽位移动游标，
+ * 但难点在于多个生产者具体写数据时如何不相互覆盖，即写数据时确认对应的槽位是可以写的，这个问题在快速写入数据到数组以至于又绕回到相同的位置时就必然要遇到数据覆盖的问题。
+ * 而单生产者不存在是因为有一个游标在控制
  */
 public final class MultiProducerSequencer extends AbstractSequencer
 {
@@ -208,7 +214,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
 
     /**
      * 单生产者直接推进到高位sequence
-     * 多生产者模式需要逐个推进可以确保availableBuffer中的每个序号被正确标记为已发布，并且可以避免并发问题。
+     * 多生产者模式需要逐个确保availableBuffer中的每个序号被正确标记为已发布，并且可以避免并发问题。
      * @see Sequencer#publish(long, long)
      * @see SingleProducerSequencer#publish(long, long)
      */
