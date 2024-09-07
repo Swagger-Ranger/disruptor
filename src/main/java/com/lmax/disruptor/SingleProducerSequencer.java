@@ -160,6 +160,11 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
         long wrapPoint = nextSequence - bufferSize;
         long cachedGatingSequence = this.cachedValue;
 
+        /*
+         * 生产者不追上消费者的逻辑：
+         * 计算long wrapPoint = (cursorValue + requiredCapacity) - bufferSize;
+         * 然后wrapPoint <= cachedGatingSequence就能保证生产者不追上消费者，而且为什么=也可以是因为INITIAL_CURSOR_VALUE = -1L，Sequence是从-1开始的
+         */
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
         {
 

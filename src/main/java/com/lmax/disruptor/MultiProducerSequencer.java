@@ -35,7 +35,7 @@ import java.util.concurrent.locks.LockSupport;
  * 这个类最吊的就是处理多生产者写数据解决办法
  * 首先推进`sequence`都是一样的，不管哪个生产者要写入数据都是通过`next`或者`tryNext`去申请槽位移动游标，
  * 但难点在于多个生产者具体写数据时如何不相互覆盖，即写数据时确认对应的槽位是可以写的，这个问题在快速写入数据到数组以至于又绕回到相同的位置时就必然要遇到数据覆盖的问题。
- * 而单生产者不存在是因为有一个游标在控制
+ * 因为其sequence单调递增的，只要写的sequence大于游标即可，所以单生产者不存在是因为有一个游标在控制，但多生产者就不行，sequence单调递增会绕回来
  */
 public final class MultiProducerSequencer extends AbstractSequencer
 {
@@ -84,6 +84,11 @@ public final class MultiProducerSequencer extends AbstractSequencer
         long wrapPoint = (cursorValue + requiredCapacity) - bufferSize;
         long cachedGatingSequence = gatingSequenceCache.get();
 
+        /*
+         * 生产者不追上消费者的逻辑：
+         * 计算long wrapPoint = (cursorValue + requiredCapacity) - bufferSize;
+         * 然后wrapPoint <= cachedGatingSequence就能保证生产者不追上消费者，而且为什么=也可以是因为INITIAL_CURSOR_VALUE = -1L，Sequence是从-1开始的
+         */
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > cursorValue)
         {
             long minSequence = Util.getMinimumSequence(gatingSequences, cursorValue);
@@ -139,6 +144,11 @@ public final class MultiProducerSequencer extends AbstractSequencer
         long wrapPoint = nextSequence - bufferSize;
         long cachedGatingSequence = gatingSequenceCache.get();
 
+        /*
+         * 生产者不追上消费者的逻辑：
+         * 计算long wrapPoint = (cursorValue + requiredCapacity) - bufferSize;
+         * 然后wrapPoint <= cachedGatingSequence就能保证生产者不追上消费者，而且为什么=也可以是因为INITIAL_CURSOR_VALUE = -1L，Sequence是从-1开始的
+         */
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > current)
         {
             long gatingSequence;
